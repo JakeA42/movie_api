@@ -6,47 +6,48 @@ from fastapi.params import Query
 
 router = APIRouter()
 
-# script search
-@router.get("/lines/{movie_id}", tags=["lines"])
-def get_lines9(movie_id: int):
-    """
-    This endpoint returns a single movie by its identifier. For each movie it returns:
-    * `movie_id`: the internal id of the movie.
-    * `title`: The title of the movie.
-    * `top_characters`: A list of characters that are in the movie. The characters
-      are ordered by the number of lines they have in the movie. The top five
-      characters are listed.
 
-    Each character is represented by a dictionary with the following keys:
-    * `character_id`: the internal id of the character.
-    * `character`: The name of the character.
-    * `num_lines`: The number of lines the character has in the movie.
-
+@router.get("/lines/{movie_id}/", tags=["lines"])
+def get_lines(
+    movie_id: int,
+    character: str = "",
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
     """
+    This endpoint returns all the lines in a movie as a list. Each entry contains:
+    * `character` : character's name
+    * `line` : the line
     
-    movie = db.movies.get(movie_id)
-    if movie:
-        top_chars = [
-            {
-                "character_id" : c.id,
-                "character" : c.name,
-                "num_lines" : c.num_lines
-            }
-            for c in db.characters.values() if c.movie_id == movie_id
-        ]
-        top_chars.sort(key=lambda c: c["num_lines"], reverse=True)
+    The conversations can be filtered to only show lines with a certain character 
+    using the `character` query parameter.
+    """
 
-        result = {
-            "movie_id" : movie_id,
-            "title" : movie.title,
-            "top_characters" : top_chars[0:5]
-        }
+    movie = db.conversations.get(movie_id)
+    if movie:
+
+        filter_fn = lambda line: line.movie_id == movie_id
+        if character:
+            filter_fn = lambda line: line.movie_id == movie_id \
+                        and db.characters.get(line.c_id).name == character.upper()
+
+        lines = [l for l in filter(filter_fn, db.lines.values())]
+        lines.sort(key=lambda l: (l.conv_id, l.line_sort))
+
+        result = (
+            {
+                "character" : (lambda c: c and c.name)(db.characters.get(l.c_id)),
+                "line" : l.line_text
+            }
+            for l in lines[offset : offset + limit]
+        )
         return result
 
     raise HTTPException(status_code=404, detail="movie not found.")
 
+
 @router.get("/conversations/{movie_id}/", tags=["lines"])
-def get_lines(
+def get_conversations(
     movie_id: int,
     character: str = "",
     limit: int = Query(50, ge=1, le=500),
@@ -106,63 +107,48 @@ def get_lines(
     raise HTTPException(status_code=404, detail="movie not found.")
 
 
-class movie_sort_options(str, Enum):
-    movie_title = "movie_title"
-    year = "year"
-    rating = "rating"
-
-
-# Add get parameters
-@router.get("/movies/", tags=["movies"])
-def list_movies(
-    name: str = "",
-    limit: int = Query(50, ge=1, le=250),
-    offset: int = Query(0, ge=0),
-    sort: movie_sort_options = movie_sort_options.movie_title,
-):
+@router.get("/conversation/{conversation_id}", tags=["lines"])
+def get_conversation(conversation_id: int):
     """
-    This endpoint returns a list of movies. For each movie it returns:
-    * `movie_id`: the internal id of the movie. Can be used to query the
-      `/movies/{movie_id}` endpoint.
-    * `movie_title`: The title of the movie.
-    * `year`: The year the movie was released.
-    * `imdb_rating`: The IMDB rating of the movie.
-    * `imdb_votes`: The number of IMDB votes for the movie.
+    This endpoint gets details about a conversation:
+    * `movie_id`: the internal id of the movie.
+    * `title`: The title of the movie.
+    * `characters`: list of the 2 characters in the conversation
+    * `num_lines`: numebr of lines in the conversation
+    * `lines`: list of lines in the conversation spoken by each character
 
-    You can filter for movies whose titles contain a string by using the
-    `name` query parameter.
+    Each character is represented by a dictionary with the following keys:
+    * `character_id`: the internal id of the character.
+    * `name`: The name of the character.
 
-    You can also sort the results by using the `sort` query parameter:
-    * `movie_title` - Sort by movie title alphabetically.
-    * `year` - Sort by year of release, earliest to latest.
-    * `rating` - Sort by rating, highest to lowest.
+    Lines are in the format "character name" : "line text"    
 
-    The `limit` and `offset` query
-    parameters are used for pagination. The `limit` query parameter specifies the
-    maximum number of results to return. The `offset` query parameter specifies the
-    number of results to skip before returning results.
     """
-    if name:
-        filter_fn = lambda m: m.title and (name.lower() in m.title)
-    else:
-        filter_fn = lambda _: True
-    items = list(filter(filter_fn, db.movies.values()))
-    if sort == movie_sort_options.movie_title:
-        items.sort(key=lambda m: m.title)
-    elif sort == movie_sort_options.year:
-        items.sort(key=lambda m: m.year)
-    elif sort == movie_sort_options.rating:
-        items.sort(key=lambda m: m.imdb_rating, reverse=True)
-
-    json = (
-        {
-            "movie_id" : m.id,
-            "movie_title" : m.title,
-            "year" : m.year,
-            "imdb_rating" : m.imdb_rating,
-            "imdb_votes" : m.imdb_votes
+    
+    conv = db.conversations.get(conversation_id)
+    if conv:
+        charname = lambda c: c and c.name
+        lines = list(filter(lambda l: l.conv_id == conversation_id, db.lines.values()))
+        lines.sort(key=lambda l: l.line_sort)
+        result = {
+            "movie_id" : conv.movie_id,
+            "title" : (lambda m: m and m.title)(db.movies.get(conv.movie_id)),
+            "characters" : (
+                {
+                    "character_id" : id,
+                    "name" : charname(db.characters.get(id))
+                }
+                for id in [conv.c1_id, conv.c2_id]
+            ),
+            "num_lines" : conv.num_lines,
+            "lines" : (
+                {
+                    "character" : charname(db.characters.get(l.c_id)),
+                    "line" : l.line_text
+                }
+                for l in lines
+            )
         }
-        for m in items[offset:offset+limit]
-    )
+        return result
 
-    return json
+    raise HTTPException(status_code=404, detail="movie not found.")
