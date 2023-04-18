@@ -23,7 +23,7 @@ def get_lines(
     using the `character` query parameter.
     """
 
-    movie = db.conversations.get(movie_id)
+    movie = db.movies.get(movie_id)
     if movie:
 
         filter_fn = lambda line: line.movie_id == movie_id
@@ -65,7 +65,7 @@ def get_conversations(
     using the `character` query parameter.
     """
 
-    movie = db.conversations.get(movie_id)
+    movie = db.movies.get(movie_id)
     if movie:
 
         filter_fn = lambda line: line.movie_id == movie_id
