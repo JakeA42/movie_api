@@ -25,31 +25,52 @@ def get_movie(movie_id: int):
     * `num_lines`: The number of lines the character has in the movie.
 
     """
-    # if movie_id.isnumeric():
-    #     movie_id = int(movie_id)
-    
+    movie_stmt = (
+        sqlalchemy.select(
+            db.movies.c.id,
+            db.movies.c.title
+        )
+        .where(db.movies.c.id == movie_id)
+    )
+    chars_stmt = sqlalchemy.text(
+        """
+        WITH chars_lines AS (
+            SELECT character_id, count(*) AS num_lines
+            FROM lines
+            GROUP BY character_id
+        )
+        SELECT c.id, c.name, cl.num_lines
+        FROM characters AS c
+        LEFT JOIN chars_lines AS cl ON c.id = cl.character_id
+        WHERE c.movie_id = (:qmovie_id)
+        ORDER BY cl.num_lines DESC
+        LIMIT 5
+        """
+    )
 
-    
-    movie = db.movies.get(movie_id)
-    if movie:
-        top_chars = [
+    with db.engine.connect() as conn:
+        movie_result = conn.execute(movie_stmt)
+        chars_result = conn.execute(chars_stmt, {"qmovie_id" : movie_id})
+        if movie_result.rowcount < 1:
+            raise HTTPException(status_code=404, detail="movie not found.")
+        top_chars = (
             {
-                "character_id" : c.id,
-                "character" : c.name,
-                "num_lines" : c.num_lines
+                "character_id" : row.id,
+                "character" : row.name,
+                "num_lines" : row.num_lines
             }
-            for c in db.characters.values() if c.movie_id == movie_id
-        ]
-        top_chars.sort(key=lambda c: c["num_lines"], reverse=True)
+            for row in chars_result
+        )
+        movie_row = movie_result.one()
+        json = (
+            {
+                "movie_id" : movie_row.id,
+                "title" : movie_row.title,
+                "top_characters" : top_chars
+            }
+        )
 
-        result = {
-            "movie_id" : movie_id,
-            "title" : movie.title,
-            "top_characters" : top_chars[0:5]
-        }
-        return result
-
-    raise HTTPException(status_code=404, detail="movie not found.")
+        return json
 
 
 class movie_sort_options(str, Enum):

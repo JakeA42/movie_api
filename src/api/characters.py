@@ -54,13 +54,55 @@ def get_character(id: int):
             db.characters.c.gender,
         )
         .join(db.movies, db.movies.c.id == db.characters.c.movie_id)
-        .where(db.characters.id == id)
+        .where(db.characters.c.id == id)
     )
     conv_stmt = sqlalchemy.text(
         """
-        SELECT 
+        WITH convs_with_char AS (
+            SELECT id, character2_id AS otherc_id, movie_id FROM conversations
+            WHERE character1_id = (:qchar_id)
+            UNION
+            SELECT id, character1_id AS otherc_id, movie_id FROM conversations
+            WHERE character2_id = (:qchar_id)
+        ),
+        lines_per_conv AS (
+            SELECT conversation_id, count(*) AS num_lines FROM lines
+            GROUP BY conversation_id
+        )
+        SELECT c.id, c.name, c.gender, sum(lpc.num_lines) AS shared_lines
+        FROM convs_with_char AS cv
+        JOIN characters AS c ON c.id = cv.otherc_id
+        JOIN lines_per_conv AS lpc ON lpc.conversation_id = cv.id
+        GROUP BY c.id
+        ORDER BY shared_lines DESC
         """
     )
+
+    with db.engine.connect() as conn:
+        char_result = conn.execute(char_stmt)
+        conv_result = conn.execute(conv_stmt, {"qchar_id" : id})
+        if char_result.rowcount < 1:
+            raise HTTPException(status_code=404, detail="character not found.")
+        char_row = char_result.one()
+        json = (
+            {
+                "character_id" : char_row.id,
+                "character" : char_row.name,
+                "movie" : char_row.title,
+                "gender" : char_row.gender,
+                "top_conversations" : (
+                    {
+                        "character_id" : row.id,
+                        "character" : row.name,
+                        "gender" : row.gender,
+                        "number_of_lines_together" : row.shared_lines
+                    }
+                    for row in conv_result
+                )
+            }
+        )
+
+        return json
 
     if False:
         # print("character found")
