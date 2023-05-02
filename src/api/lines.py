@@ -22,32 +22,51 @@ def get_lines(
     using the `character` query parameter.
     """
 
-    movie = db.movies.get(movie_id)
-    if movie:
-
-        filter_fn = lambda line: line.movie_id == movie_id
-        if character:
-            filter_fn = lambda line: line.movie_id == movie_id \
-                        and db.characters.get(line.c_id).name == character.upper()
-
-        lines = [l for l in filter(filter_fn, db.lines.values())]
-        lines.sort(key=lambda l: (l.conv_id, l.line_sort))
-
-        result = (
-            {
-                "character" : (lambda c: c and c.name)(db.characters.get(l.c_id)),
-                "line" : l.line_text
-            }
-            for l in lines[offset : offset + limit]
+    stmt = (
+        sqlalchemy.select(
+            db.characters.c.name,
+            db.lines.c.line_text
         )
-        return result
+        .join(db.characters, db.lines.c.character_id == db.characters.c.id)
+        .where(db.lines.c.movie_id == movie_id)
+        .order_by(db.lines.c.conversation_id, db.lines.c.line_sort)
+        .limit(limit)
+        .offset(offset)
+    )
+    if character:
+        stmt = stmt.where(db.characters.c.name == character.upper())
+    
+    with db.engine.connect() as conn:
+        result = conn.execute(stmt)
+        json = (
+            {
+                "character" : row.name,
+                "line" : row.line_text
+            }
+            for row in result
+        )
+        return json 
+        
 
-    raise HTTPException(status_code=404, detail="movie not found.")
+def split_convs(lines_list: sqlalchemy.engine.cursor.CursorResult):
+    if lines_list.rowcount < 1:
+        return
 
-
-def split_convs(lines_list):
-    for x in lines_list:
-        pass
+    conv_lines = []
+    conv = None
+    for row in lines_list:
+        if not conv:
+            conv = row.conversation_id
+        if conv != row.conversation_id:
+            yield conv, conv_lines
+            conv_lines.clear()
+            conv = row.conversation_id
+        
+        conv_lines.append({
+            "character" : row.name,
+            "line" : row.line_text
+        })
+    yield conv, conv_lines
 
 
 @router.get("/conversations/{movie_id}/", tags=["lines"])
@@ -69,16 +88,61 @@ def get_conversations(
     using the `character` query parameter.
     """
 
-    stmt = (
-        sqlalchemy.select(
-            db.lines.c.conversation_id,
-            db.characters.c.name,
-            db.lines.c.line_sort,
-            db.lines.c.line_text
+    # stmt_conv = (
+    #     sqlalchemy.select(
+    #         db.conversations.c.id,
+    #         db.characters.c.name,
+    #         db.lines.c.line_sort,
+    #         db.lines.c.line_text
+    #     )
+    #     .join(db.characters, db.characters.c.id == db.lines.c.character_id)
+    #     .where(db.lines.c.movie_id == movie_id)
+    #     .orderby(db.lines.conv_id, db.lines.line_sort)
+    # )
+
+    # stmt = (
+    #     sqlalchemy.select(
+    #         db.lines.c.conversation_id,
+    #         db.characters.c.name,
+    #         db.lines.c.line_sort,
+    #         db.lines.c.line_text
+    #     )
+    #     .join(db.characters, db.characters.c.id == db.lines.c.character_id)
+    #     .where(db.lines.c.movie_id == movie_id)
+    #     .orderby(db.lines.conv_id, db.lines.line_sort)
+    # )
+    where = "WHERE c.name ilike (:cname)" if character else ""
+    stmt = sqlalchemy.text(
+        f"""
+        WITH conv_lim_off AS (
+            SELECT id FROM conversations
+            WHERE movie_id = (:qmovie_id)
+            ORDER BY id
+            LIMIT (:qlimit)
+            OFFSET (:qoffset)
         )
-        .join(db.characters, db.characters.c.id == db.lines.c.character_id)
-        .where(db.lines.c.movie_id == movie_id)
+        SELECT l.conversation_id, c.name, l.line_sort, l.line_text
+        FROM lines as l
+        RIGHT JOIN conv_lim_off ON l.conversation_id = conv_lim_off.id
+        LEFT JOIN characters AS c ON l.character_id = c.id
+        {where}
+        """
     )
+    with db.engine.connect() as conn:
+        result = conn.execute(stmt, {"qmovie_id" : movie_id, "cname" : character, "qlimit" : limit, "qoffset" : offset})
+        json = (
+            {
+                "conversation_id" : conv,
+                "lines" : conv_lines
+            }
+            for conv, conv_lines in split_convs(result)
+        )
+
+        return json
+
+
+
+    return None
 
 
     movie = db.movies.get(movie_id)

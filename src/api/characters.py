@@ -191,7 +191,7 @@ def list_characters(
     )
 
     with db.engine.connect() as conn:
-        result = conn.execute(stmt, {"cname" : name, "qlimit" : limit, "qoffset" : offset})
+        result = conn.execute(stmt, {"cname" : f"%{name}%", "qlimit" : limit, "qoffset" : offset})
         json = (
             {
                 "character_id" : row.id,
