@@ -1,7 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from enum import Enum
 from src import database as db
-from src.datatypes import Character, Movie, Conversation, Line
 from fastapi.params import Query
 import sqlalchemy
 
@@ -47,6 +45,11 @@ def get_lines(
     raise HTTPException(status_code=404, detail="movie not found.")
 
 
+def split_convs(lines_list):
+    for x in lines_list:
+        pass
+
+
 @router.get("/conversations/{movie_id}/", tags=["lines"])
 def get_conversations(
     movie_id: int,
@@ -66,6 +69,18 @@ def get_conversations(
     using the `character` query parameter.
     """
 
+    stmt = (
+        sqlalchemy.select(
+            db.lines.c.conversation_id,
+            db.characters.c.name,
+            db.lines.c.line_sort,
+            db.lines.c.line_text
+        )
+        .join(db.characters, db.characters.c.id == db.lines.c.character_id)
+        .where(db.lines.c.movie_id == movie_id)
+    )
+
+
     movie = db.movies.get(movie_id)
     if movie:
 
@@ -73,7 +88,6 @@ def get_conversations(
         if character:
             filter_fn = lambda line: line.movie_id == movie_id \
                         and db.characters.get(line.c_id).name == character.upper()
-
 
         conv_lines = {}
 
@@ -126,50 +140,43 @@ def get_conversation(conversation_id: int):
 
     """
 
-    conv_stmt = (
-        sqlalchemy.select(
-            db.movies.c.id,
-            db.movies.c.title,
-            db.characters.c.name,
-
-        )
+    stmt_conv = sqlalchemy.text(
+        """
+        SELECT cv.movie_id, m.title, c1.id AS c1_id, c1.name AS c1_name, c2.id AS c2_id, c2.name AS c2_name
+        FROM conversations AS cv
+        LEFT JOIN movies AS m ON cv.movie_id = m.id
+        LEFT JOIN characters AS c1 ON c1.id = cv.character1_id
+        LEFT JOIN characters AS c2 ON c2.id = cv.character2_id
+        WHERE cv.id = (:id)
+        """
     )
-    s1 = sqlalchemy.text(
-        "SELECT c.movie_id, m.title, c1.id, c1.name, c2.id, c2.name FROM conversations AS c " + \
-        "LEFT JOIN movies AS m ON c.movie_id = m.id " + \
-        "LEFT JOIN characters AS c1 ON c1.id = c.character1_id " + \
-        "LEFT JOIN characters AS c2 ON c2.id = c.character2_id " + \
-        "WHERE c.id = (:id)"
+    stmt_lines = sqlalchemy.text(
+        """
+        SELECT c.name, l.line_text FROM lines AS l
+        LEFT JOIN characters AS c ON l.character_id = c.id
+        WHERE l.conversation_id = (:id)
+        ORDER BY l.line_sort
+        """
     )
 
     with db.engine.connect() as conn:
-        conn.execute(s1, [{"id" : conversation_id}])
-
-    
-    conv = db.conversations.get(conversation_id)
-    if conv:
-        charname = lambda c: c and c.name
-        lines = list(filter(lambda l: l.conv_id == conversation_id, db.lines.values()))
-        lines.sort(key=lambda l: l.line_sort)
-        result = {
-            "movie_id" : conv.movie_id,
-            "title" : (lambda m: m and m.title)(db.movies.get(conv.movie_id)),
-            "characters" : (
-                {
-                    "character_id" : id,
-                    "name" : charname(db.characters.get(id))
-                }
-                for id in [conv.c1_id, conv.c2_id]
-            ),
-            "num_lines" : conv.num_lines,
-            "lines" : (
-                {
-                    "character" : charname(db.characters.get(l.c_id)),
-                    "line" : l.line_text
-                }
-                for l in lines
-            )
+        conv_result = conn.execute(stmt_conv, [{"id" : conversation_id}])
+        lines_result = conn.execute(stmt_lines, [{"id" : conversation_id}])
+        if conv_result.rowcount < 1:
+            raise HTTPException(status_code=404, detail="conversation not found.")
+        conv_row = conv_result.one()
+        lines = (
+            { row.name : row.line_text }
+            for row in lines_result
+        )
+        json = {
+            "movie_id" : conv_row.movie_id,
+            "title" : conv_row.title,
+            "characters" : [
+                {"character_id" : conv_row.c1_id, "name" : conv_row.c1_name},
+                {"character_id" : conv_row.c2_id, "name" : conv_row.c2_name}
+            ],
+            "num_lines" : lines_result.rowcount,
+            "lines" : lines
         }
-        return result
-
-    raise HTTPException(status_code=404, detail="movie not found.")
+        return json
