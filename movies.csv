@@ -137,7 +137,7 @@ movie_id,title,year,imdb_rating,imdb_votes,raw_script_url
 303,conspiracy theory,1997,6.5,36045,http://www.dailyscript.com/scripts/conspiracy-theory.html
 304,contact,1997,7.4,75043,http://www.scifiscripts.com/scripts/contact.txt
 305,cool hand luke,1967,8.3,46514,http://www.aellea.com/script/cool_hand_luke.html
-307,crash,2004/I,8.0,174003,http://www.dailyscript.com/scripts/Crash+(1996).txt
+307,crash,2004,8.0,174003,http://www.dailyscript.com/scripts/Crash+(1996).txt
 311,the crow,1994,7.6,55886,http://www.horrorlair.com/scripts/crow.txt
 312,cruel intentions,1999,6.7,67532,http://www.dailyscript.com/scripts/cruel-intentions.html
 315,dark city,1998,7.8,64262,http://www.dailyscript.com/scripts/dark-city_early-rewrite.html
@@ -175,10 +175,10 @@ movie_id,title,year,imdb_rating,imdb_votes,raw_script_url
 375,grosse pointe blank,1997,7.4,41877,http://www.dailyscript.com/scripts/Grosse%20Pointe%20Blank.txt
 379,halloween,1978,7.9,64690,http://www.dailyscript.com/scripts/Halloween.txt
 381,hannibal,2001,6.4,75788,http://www.dailyscript.com/scripts/Hannibal%20-%20Zaillian.txt
-389,hostage,2005/I,6.6,37868,http://home.online.no/~bhundlan/scripts/hostage.htm
+389,hostage,2005,6.6,37868,http://home.online.no/~bhundlan/scripts/hostage.htm
 390,hotel rwanda,2004,8.3,94404,http://www.dailyscript.com/scripts/hotel_rwanda.html
 395,the hudsucker proxy,1994,7.4,32691,http://www.dailyscript.com/scripts/Hudsucker%20Proxy%20The.txt
-398,insomnia,2002/I,7.3,69635,http://www.dailyscript.com/scripts/insomnia.html
+398,insomnia,2002,7.3,69635,http://www.dailyscript.com/scripts/insomnia.html
 399,interview with the vampire: the vampire chronicles,1994,7.4,80077,http://www.scifiscripts.com/scripts/interview.txt
 402,it's a wonderful life,1946,8.7,103290,http://www.aellea.com/script/itsawonderfullife.txt
 408,jerry maguire,1996,7.3,79706,http://www.awesomefilm.com/script/jerryMaguire.txt
@@ -191,7 +191,7 @@ movie_id,title,year,imdb_rating,imdb_votes,raw_script_url
 422,lock stock and two smoking barrels,1998,8.2,129117,http://www.scifiscripts.com/msol/lockstock_screenplay.txt
 425,lost in translation,2003,7.9,132645,http://www.dailyscript.com/scripts/lost-in-translation-script.html
 428,magnolia,1999,8.0,123476,http://www.dailyscript.com/scripts/magnolia.html
-429,the man in the iron mask,1998/I,6.1,36684,http://www.dailyscript.com/scripts/man_in_iron_mask_95.html
+429,the man in the iron mask,1998,6.1,36684,http://www.dailyscript.com/scripts/man_in_iron_mask_95.html
 432,man on the moon,1999,7.4,49915,http://www.scifiscripts.com/msol/manonthemoon.txt
 433,the matrix,1999,8.7,389480,http://www.scifiscripts.com/scripts/matrix_97_draft.txt
 435,meet joe black,1998,6.9,56839,http://www.awesomefilm.com/script/meetjoeblack.txt
@@ -233,7 +233,7 @@ movie_id,title,year,imdb_rating,imdb_votes,raw_script_url
 504,schindler's list,1993,8.9,282473,http://www.awesomefilm.com/script/schindlerslist.txt
 505,scream 2,1997,5.9,48988,http://www.horrorlair.com/scripts/scream2.txt
 506,scream 3,2000,5.3,38870,http://www.horrorlair.com/scripts/scream3_early_draft.txt
-507,scream,1996/I,7.2,92543,http://www.dailyscript.com/scripts/Scream.txt
+507,scream,1996,7.2,92543,http://www.dailyscript.com/scripts/Scream.txt
 509,the searchers,1956,8.1,30138,http://www.dailyscript.com/scripts/Searchers%20The.txt
 511,shakespeare in love,1998,7.4,78654,http://www.dailyscript.com/scripts/Shakespeare%20In%20Love.txt
 514,the shining,1980,8.5,182077,http://www.dailyscript.com/scripts/shining.html
@@ -256,7 +256,7 @@ movie_id,title,year,imdb_rating,imdb_votes,raw_script_url
 556,the x files,1998,6.8,39090,http://www.dailyscript.com/scripts/the-x-files_production.html
 557,the cell,2000,6.2,37417,http://www.dailyscript.com/scripts/the_cell.html
 558,the third man,1949,8.5,51872,http://www.dailyscript.com/scripts/the_third_man.html
-559,the beach,2000/I,6.3,55734,http://www.scifiscripts.com/msol/beach/script01_15.htm
+559,the beach,2000,6.3,55734,http://www.scifiscripts.com/msol/beach/script01_15.htm
 566,the pianist,2002,8.5,138080,http://www.dailyscript.com/scripts/Pianist%20The.txt
 568,the sting,1973,8.4,67231,http://www.dailyscript.com/scripts/Sting%20The.txt
 570,three kings,1999,7.3,69757,http://www.dailyscript.com/scripts/three-kings_unproduced.html

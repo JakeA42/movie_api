@@ -5,6 +5,7 @@ from collections import Counter
 from fastapi.params import Query
 from src import database as db
 import json
+import sqlalchemy
 
 router = APIRouter()
 
@@ -44,13 +45,24 @@ def get_character(id: int):
     * `number_of_lines_together`: The number of lines the character has with the
       originally queried character.
     """
-    # character = None
-    # if id.isnumeric():
-    #     id = int(id)
-    #     character = db.characters.get(id)
-    character = db.characters.get(id)
 
-    if character:
+    char_stmt = (
+        sqlalchemy.select(
+            db.characters.c.id,
+            db.characters.c.name,
+            db.movies.c.title,
+            db.characters.c.gender,
+        )
+        .join(db.movies, db.movies.c.id == db.characters.c.movie_id)
+        .where(db.characters.id == id)
+    )
+    conv_stmt = sqlalchemy.text(
+        """
+        SELECT 
+        """
+    )
+
+    if False:
         # print("character found")
         movie = db.movies.get(character.movie_id)
         result = {
@@ -107,29 +119,45 @@ def list_characters(
     maximum number of results to return. The `offset` query parameter specifies the
     number of results to skip before returning results.
     """
-
-    if name:
-        filter_fn = lambda c: c.name and (name.upper() in c.name)
+    
+    if sort is character_sort_options.character:
+        order_by = "c.name"
+    elif sort is character_sort_options.movie:
+        order_by = "m.title"
+    elif sort is character_sort_options.number_of_lines:
+        order_by = "cnl.num_lines DESC"
     else:
-        filter_fn = lambda _: True
+        raise HTTPException(400, "Invalid sort option")
 
-    items = list(filter(filter_fn, db.characters.values()))
+    where = "WHERE c.name ilike (:cname)" if name else ""
 
-    none_last = lambda x, reverse = False: ((x is None) ^ reverse, x)
-    if sort == character_sort_options.character:
-        items.sort(key=lambda c: none_last(c.name))
-    elif sort == character_sort_options.movie:
-        items.sort(key=lambda c: none_last(db.movies[c.movie_id].title))
-    elif sort == character_sort_options.number_of_lines:
-        items.sort(key=lambda c: none_last(c.num_lines, True), reverse=True)
-
-    json = (
-        {
-            "character_id" : c.id,
-            "character" : c.name,
-            "movie" : db.movies[c.movie_id].title,
-            "number_of_lines" : c.num_lines,
-        }
-        for c in items[offset:offset+limit]
+    stmt = sqlalchemy.text(
+        f"""
+        WITH chars_num_lines AS (
+            SELECT character_id, count(*) AS num_lines
+            FROM lines
+            GROUP BY character_id
+        )
+        SELECT c.id, c.name, m.title, cnl.num_lines FROM characters AS c
+        LEFT JOIN chars_num_lines AS cnl ON cnl.character_id = c.id
+        LEFT JOIN movies AS m ON c.movie_id = m.id
+        {where}
+        ORDER BY {order_by}, id
+        LIMIT (:qlimit)
+        OFFSET (:qoffset)
+        """
     )
-    return json
+
+    with db.engine.connect() as conn:
+        result = conn.execute(stmt, {"cname" : name, "qlimit" : limit, "qoffset" : offset})
+        json = (
+            {
+                "character_id" : row.id,
+                "character" : row.name,
+                "movie" : row.title,
+                "number_of_lines" : row.num_lines
+            }
+            for row in result
+        )
+
+        return json

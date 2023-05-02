@@ -1,0 +1,22 @@
+{
+	"character_1_id": 1,
+	"character_2_id": 2,
+	"lines": [
+	  {
+		"character_id": 1,
+		"line_text": "TEST1"
+	  },
+	  {
+		"character_id": 2,
+		"line_text": "TEST2"
+	  },
+	  {
+		"character_id": 1,
+		"line_text": "TEST3"
+	  },
+	  {
+		"character_id": 2,
+		"line_text": "TEST4"
+	  }
+	]
+}

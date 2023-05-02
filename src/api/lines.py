@@ -3,6 +3,7 @@ from enum import Enum
 from src import database as db
 from src.datatypes import Character, Movie, Conversation, Line
 from fastapi.params import Query
+import sqlalchemy
 
 router = APIRouter()
 
@@ -124,6 +125,26 @@ def get_conversation(conversation_id: int):
     Lines are in the format "character name" : "line text"    
 
     """
+
+    conv_stmt = (
+        sqlalchemy.select(
+            db.movies.c.id,
+            db.movies.c.title,
+            db.characters.c.name,
+
+        )
+    )
+    s1 = sqlalchemy.text(
+        "SELECT c.movie_id, m.title, c1.id, c1.name, c2.id, c2.name FROM conversations AS c " + \
+        "LEFT JOIN movies AS m ON c.movie_id = m.id " + \
+        "LEFT JOIN characters AS c1 ON c1.id = c.character1_id " + \
+        "LEFT JOIN characters AS c2 ON c2.id = c.character2_id " + \
+        "WHERE c.id = (:id)"
+    )
+
+    with db.engine.connect() as conn:
+        conn.execute(s1, [{"id" : conversation_id}])
+
     
     conv = db.conversations.get(conversation_id)
     if conv:
