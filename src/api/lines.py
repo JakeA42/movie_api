@@ -88,29 +88,6 @@ def get_conversations(
     using the `character` query parameter.
     """
 
-    # stmt_conv = (
-    #     sqlalchemy.select(
-    #         db.conversations.c.id,
-    #         db.characters.c.name,
-    #         db.lines.c.line_sort,
-    #         db.lines.c.line_text
-    #     )
-    #     .join(db.characters, db.characters.c.id == db.lines.c.character_id)
-    #     .where(db.lines.c.movie_id == movie_id)
-    #     .orderby(db.lines.conv_id, db.lines.line_sort)
-    # )
-
-    # stmt = (
-    #     sqlalchemy.select(
-    #         db.lines.c.conversation_id,
-    #         db.characters.c.name,
-    #         db.lines.c.line_sort,
-    #         db.lines.c.line_text
-    #     )
-    #     .join(db.characters, db.characters.c.id == db.lines.c.character_id)
-    #     .where(db.lines.c.movie_id == movie_id)
-    #     .orderby(db.lines.conv_id, db.lines.line_sort)
-    # )
     where = "WHERE c.name ilike (:cname)" if character else ""
     stmt = sqlalchemy.text(
         f"""
@@ -139,51 +116,6 @@ def get_conversations(
         )
 
         return json
-
-
-
-    return None
-
-
-    movie = db.movies.get(movie_id)
-    if movie:
-
-        filter_fn = lambda line: line.movie_id == movie_id
-        if character:
-            filter_fn = lambda line: line.movie_id == movie_id \
-                        and db.characters.get(line.c_id).name == character.upper()
-
-        conv_lines = {}
-
-        for line in filter(filter_fn, db.lines.values()):
-            if line.conv_id not in conv_lines:
-                conv_lines[line.conv_id] = []
-            conv_lines[line.conv_id].append(line)
-        
-        for line_list in conv_lines.values():
-            line_list.sort(key=lambda l: l.line_sort)
-
-        convs = list(conv_lines.items())
-        convs.sort() # sorts by first part of tuple, which is the id
-        
-        charname = lambda c: c and c.name
-
-        result = (
-            {
-                "conversation_id" : id,
-                "lines" : (
-                    {
-                        "character" : charname(db.characters.get(line.c_id)),
-                        "line" : line.line_text
-                    }
-                    for line in line_list
-                )
-            }
-            for id, line_list in convs[offset : offset + limit]
-        )
-        return result
-
-    raise HTTPException(status_code=404, detail="movie not found.")
 
 
 @router.get("/conversation/{conversation_id}", tags=["lines"])

@@ -1,11 +1,9 @@
 from fastapi.exceptions import HTTPException
 import sqlalchemy
-from src.datatypes import Character, Conversation, Line
 from fastapi import APIRouter
 from src import database as db
 from pydantic import BaseModel
 from typing import List
-from datetime import datetime
 
 
 # FastAPI is inferring what the request body should look like

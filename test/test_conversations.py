@@ -74,5 +74,3 @@ def test_add_conversation2():
 
     response = client.get("/conversations/0/?limit=500&offset=100")
     assert response.status_code == 200
-
-

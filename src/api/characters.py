@@ -4,7 +4,6 @@ from collections import Counter
 
 from fastapi.params import Query
 from src import database as db
-import json
 import sqlalchemy
 
 router = APIRouter()
@@ -103,28 +102,6 @@ def get_character(id: int):
         )
 
         return json
-
-    if False:
-        # print("character found")
-        movie = db.movies.get(character.movie_id)
-        result = {
-            "character_id" : character.id,
-            "character" : character.name,
-            "movie" : movie and movie.title,
-            "gender" : character.gender,
-            "top_conversations" : (
-                {
-                    "character_id" : other_id,
-                    "character" : db.characters[other_id].name,
-                    "gender" : db.characters[other_id].gender,
-                    "number_of_lines_together" : lines
-                }
-                for other_id, lines in get_top_conv_characters(character)
-            )
-        }
-        return result
-
-    raise HTTPException(status_code=404, detail="character not found.")
 
 
 class character_sort_options(str, Enum):

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from enum import Enum
 from src import database as db
-from src.datatypes import Character, Movie, Conversation, Line
 from fastapi.params import Query
 import sqlalchemy
 
